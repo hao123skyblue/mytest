@@ -1,0 +1,66 @@
+import numpy as np
+from numpy.polynomial import polynomial as poly
+
+def poly_mul(x, y, z, poly_mod):
+    init_poly = poly.polymul(x, y)
+    res_poly = poly.polydiv(init_poly % z, poly_mod)[1] % z
+    return np.int64(np.round(res_poly))
+
+def poly_add(x, y, z, poly_mod):
+    init_poly = poly.polyadd(x, y)
+    res_poly = poly.polydiv(init_poly % z, poly_mod)[1] % z
+    return np.int64(np.round(res_poly))
+
+def decrypt(key, c, poly_mod, q, t):
+    a, b, s = key
+    c0, c1 = c
+    delta = q // t
+    a_times_s = poly_mul(a, s, q, poly_mod)
+    c0_minus_a_times_s = poly_add(c0, -a_times_s, q, poly_mod)
+    m = (c0_minus_a_times_s * delta) % q
+    return m
+
+# Define the given parameters
+n = 128
+q = 2**60
+t = 2**32
+poly_mod = np.array([1] + [0] * (n - 1) + [1])
+
+
+c0 = [561582066946621440,.....]
+c1 = [91790686412574976,..... ]
+a = [219983724512243970, .....]
+b = [820893636450185216, .....]
+s = [0, 1, 0, 1, 1,.....]
+
+c = [c0, c1]
+key = [a, b, s]  # Make sure to replace 'b' with the correct value
+
+# Decrypt the ciphertext
+# Decrypt the ciphertext
+message = decrypt(key, c, poly_mod, q, t)
+
+# Convert the message back to bytes
+message_int = int(message[0])  # Convert the first element of the Numpy array to an integer
+
+# Convert the integer to a hexadecimal string
+message_hex = hex(message_int)[2:]
+
+# Make sure the hexadecimal string has an even length
+if len(message_hex) % 2 != 0:
+    message_hex = '0' + message_hex
+
+# Convert pairs of hexadecimal characters to bytes
+message_bytes = bytes.fromhex(''.join([message_hex[i:i+2] for i in range(0, len(message_hex), 2)])
+
+# Decode the bytes to a string
+flag = message_bytes.decode()
+print(flag)
+
+
+
+这个是CTF的解题python脚本，但是运行错误，下面是错误提示， 请帮忙修改   
+    flag = message_bytes.decode()
+    ^
+SyntaxError: invalid syntax
+
